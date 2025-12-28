@@ -1,0 +1,45 @@
+function T = ECE569_MatrixExp6(se3mat)
+% *** CHAPTER 3: RIGID-BODY MOTIONS ***
+% Takes a se(3) representation of exponential coordinates.
+% Returns a T matrix in SE(3) that is achieved by traveling along/about the 
+% screw axis S for a distance theta from an initial configuration T = I.
+% Example Input:
+% 
+% clear; clc;
+% se3mat = [ 0,      0,       0,      0;
+%          0,      0, -1.5708, 2.3562;
+%          0, 1.5708,       0, 2.3562;
+%          0,      0,       0,      0]
+% T = MatrixExp6(se3mat)
+% 
+% Output:
+% T =
+%    1.0000         0         0         0
+%         0    0.0000   -1.0000   -0.0000
+%         0    1.0000    0.0000    3.0000
+%         0         0         0    1.0000 
+
+omgtheta = ECE569_so3ToVec(se3mat(1: 3, 1: 3));
+if ECE569_NearZero(norm(omgtheta))
+    % Pure translation (or zero twist): exp([0 v; 0]) = [I v; 0 1]
+    T = [eye(3), se3mat(1:3,4);
+         0 0 0   1];
+else
+    [~, theta] = ECE569_AxisAng3(omgtheta);
+    omgmat = se3mat(1: 3, 1: 3) / theta;     % skew(omega)
+    R = ECE569_MatrixExp3(se3mat(1:3,1:3));  % rotation part exp([omega]^ theta)
+
+    % V = [omega; v], but here se3mat has omega*theta and v*theta
+    v_theta = se3mat(1:3,4);                 % v * theta
+    v = v_theta / theta;                     % recover v
+
+    % G(theta) = I*theta + (1 - cosθ)[ω]^ + (θ - sinθ)[ω]^2
+    G = eye(3)*theta + (1 - cos(theta))*omgmat + ...
+        (theta - sin(theta))*(omgmat*omgmat);
+
+    p = G * v;
+
+    T = [R, p;
+         0 0 0 1];
+end
+end
